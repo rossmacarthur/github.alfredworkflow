@@ -1,3 +1,4 @@
+mod cache;
 mod github;
 
 use std::env;
@@ -13,7 +14,7 @@ fn to_item(repo: github::Repo) -> Item<'static> {
 }
 
 fn run(query: Option<&str>) -> Result<()> {
-    let repos = github::repos()?;
+    let repos = cache::repos()?;
     match query {
         Some("") | None => powerpack::output(repos.into_iter().map(to_item)),
         Some(query) => powerpack::output(
