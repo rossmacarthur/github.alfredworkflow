@@ -1,18 +1,32 @@
+mod github;
+
 use std::env;
-use std::error::Error;
-use std::iter;
 
-fn main() -> Result<(), Box<dyn Error>> {
-    // Alfred passes in a single argument for the user query.
-    let query = env::args().nth(1);
+use anyhow::Result;
+use itertools::Itertools;
+use powerpack::{Icon, Item};
 
-    // Create an item to show in the Alfred drop down.
-    let item = powerpack::Item::new("Hello world!")
-        .subtitle(format!("Your query was '{:?}'", query))
-        .icon(powerpack::Icon::from_file_type("public.script"));
+fn to_item(repo: github::Repo) -> Item<'static> {
+    Item::new(format!("{}/{}", repo.owner.login, repo.name))
+        .arg(repo.url())
+        .icon(Icon::new("icon.png"))
+}
 
-    // Output the item to Alfred!
-    powerpack::output(iter::once(item))?;
-
+fn run(query: Option<&str>) -> Result<()> {
+    let repos = github::repos()?;
+    match query {
+        Some("") | None => powerpack::output(repos.into_iter().map(to_item)),
+        Some(query) => powerpack::output(
+            repos
+                .into_iter()
+                .filter(|repo| repo.owner.login.starts_with(query) || repo.name.starts_with(query))
+                .sorted_by(|a, b| (&a.name, &a.owner.login).cmp(&(&b.name, &b.owner.login)))
+                .map(to_item),
+        ),
+    }?;
     Ok(())
+}
+
+fn main() -> Result<()> {
+    run(env::args().nth(1).as_deref().map(|s| s.trim()))
 }

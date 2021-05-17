@@ -10,13 +10,18 @@
 	<string>io.macarthur.ross.github</string>
 	<key>createdby</key>
 	<string>Ross MacArthur</string>
+	<key>variables</key>
+	<dict>
+		<key>GITHUB_TOKEN</key>
+		<string></string>
+	</dict>
 	<key>connections</key>
 	<dict>
 		<key>F9C877AF-A87D-462C-ABE1-0BD6005C04DD</key>
 		<array>
 			<dict>
 				<key>destinationuid</key>
-				<string>975597FC-671D-443B-A6E3-5775263AF03E</string>
+				<string>175BB77C-330B-465F-A2E7-E4CEF4BDE70D</string>
 			</dict>
 		</array>
 	</dict>
@@ -29,7 +34,7 @@
 			<key>ypos</key>
 			<integer>50</integer>
 		</dict>
-		<key>975597FC-671D-443B-A6E3-5775263AF03E</key>
+		<key>175BB77C-330B-465F-A2E7-E4CEF4BDE70D</key>
 		<dict>
 			<key>xpos</key>
 			<integer>225</integer>
@@ -41,12 +46,12 @@
 	<array>
 		<dict>
 			<key>uid</key>
-			<string>975597FC-671D-443B-A6E3-5775263AF03E</string>
+			<string>175BB77C-330B-465F-A2E7-E4CEF4BDE70D</string>
 			<key>type</key>
-			<string>alfred.workflow.output.clipboard</string>
+			<string>alfred.workflow.action.openurl</string>
 			<key>config</key>
 			<dict>
-				<key>clipboardtext</key>
+				<key>url</key>
 				<string>{query}</string>
 			</dict>
 		</dict>
