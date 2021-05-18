@@ -6,7 +6,7 @@ use std::vec;
 
 use anyhow::Result;
 use itertools::Itertools;
-use powerpack::{Icon, Item, String as Str};
+use powerpack::{Item, String as Str};
 
 const SHORTCUTS: &[(&str, &str)] = &[
     ("/feed", "/"),
@@ -29,15 +29,11 @@ fn shortcuts() -> vec::IntoIter<(Str<'static>, Str<'static>)> {
 }
 
 fn repo_to_item(repo: github::Repo) -> Item<'static> {
-    Item::new(format!("{}/{}", repo.owner.login, repo.name))
-        .arg(repo.url())
-        .icon(Icon::new("icon.png"))
+    Item::new(format!("{}/{}", repo.owner.login, repo.name)).arg(repo.url())
 }
 
 fn shortcut_to_item<'a>(shortcut: (Str<'a>, Str<'a>)) -> Item<'a> {
-    Item::new(shortcut.0)
-        .arg(format!("https://github.com{}", shortcut.1))
-        .icon(Icon::new("icon.png"))
+    Item::new(shortcut.0).arg(format!("https://github.com{}", shortcut.1))
 }
 
 fn run(query: Option<&str>) -> Result<()> {
