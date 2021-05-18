@@ -1,5 +1,7 @@
 # github.alfredworkflow
 
+[![Build status](https://github.com/rossmacarthur/github.alfredworkflow/actions/workflows/build.yaml/badge.svg)](https://github.com/rossmacarthur/github.alfredworkflow/actions/workflows/build.yaml)
+
 Alfred workflow to search for GitHub repos.
 
 ## 📦 Installation
