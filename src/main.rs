@@ -29,7 +29,9 @@ fn shortcuts() -> vec::IntoIter<(Str<'static>, Str<'static>)> {
 }
 
 fn repo_to_item(repo: github::Repo) -> Item<'static> {
-    Item::new(format!("{}/{}", repo.owner.login, repo.name)).arg(repo.url())
+    Item::new(repo.name.clone())
+        .subtitle(format!("#{}/{}", repo.owner.login, repo.name))
+        .arg(repo.url())
 }
 
 fn shortcut_to_item<'a>(shortcut: (Str<'a>, Str<'a>)) -> Item<'a> {
@@ -39,7 +41,7 @@ fn shortcut_to_item<'a>(shortcut: (Str<'a>, Str<'a>)) -> Item<'a> {
 fn run(query: Option<&str>) -> Result<()> {
     let repos = cache::repos()?;
     match query {
-        Some("") | None => powerpack::output(repos.into_iter().map(repo_to_item)),
+        Some("") | None => powerpack::output(repos.into_iter().sorted().map(repo_to_item)),
         Some(query) if query.starts_with('/') => powerpack::output(
             shortcuts()
                 .filter(|(s, _)| s.starts_with(query))
@@ -49,7 +51,7 @@ fn run(query: Option<&str>) -> Result<()> {
             repos
                 .into_iter()
                 .filter(|repo| repo.owner.login.starts_with(query) || repo.name.starts_with(query))
-                .sorted_by(|a, b| (&a.name, &a.owner.login).cmp(&(&b.name, &b.owner.login)))
+                .sorted()
                 .map(repo_to_item)
                 .chain(
                     shortcuts()

@@ -10,15 +10,15 @@ const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VE
 static TOKEN: Lazy<String> =
     Lazy::new(|| env::var("GITHUB_TOKEN").expect("`GITHUB_TOKEN` must be set"));
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub struct Owner {
     pub login: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 pub struct Repo {
-    pub owner: Owner,
     pub name: String,
+    pub owner: Owner,
 }
 
 impl Repo {
