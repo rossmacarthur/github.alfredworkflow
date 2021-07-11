@@ -2,11 +2,12 @@ mod cache;
 mod github;
 
 use std::env;
+use std::iter;
 use std::vec;
 
 use anyhow::Result;
 use itertools::Itertools;
-use powerpack::{Item, String as Str};
+use powerpack::{Item, String};
 
 const SHORTCUTS: &[(&str, &str)] = &[
     ("/feed", "/"),
@@ -16,10 +17,10 @@ const SHORTCUTS: &[(&str, &str)] = &[
     ("/settings", "/settings"),
 ];
 
-fn shortcuts() -> vec::IntoIter<(Str<'static>, Str<'static>)> {
+fn shortcuts() -> vec::IntoIter<(String<'static>, String<'static>)> {
     let mut shortcuts: Vec<_> = SHORTCUTS
         .iter()
-        .map(|&(a, b)| (Str::from(a), Str::from(b)))
+        .map(|&(a, b)| (String::from(a), String::from(b)))
         .sorted_by(|a, b| a.0.cmp(&b.0))
         .collect();
     if let Some(user) = powerpack::env::var("GITHUB_USER") {
@@ -34,8 +35,12 @@ fn repo_to_item(repo: github::Repo) -> Item<'static> {
         .arg(repo.url())
 }
 
-fn shortcut_to_item<'a>(shortcut: (Str<'a>, Str<'a>)) -> Item<'a> {
+fn shortcut_to_item<'a>(shortcut: (String<'a>, String<'a>)) -> Item<'a> {
     Item::new(shortcut.0).arg(format!("https://github.com{}", shortcut.1))
+}
+
+fn exact<'a>(query: &'a str) -> Item<'a> {
+    Item::new(query).arg(format!("https://github.com/{}", query))
 }
 
 fn run(query: Option<&str>) -> Result<()> {
@@ -47,6 +52,7 @@ fn run(query: Option<&str>) -> Result<()> {
                 .filter(|(s, _)| s.starts_with(query))
                 .map(shortcut_to_item),
         ),
+        Some(query) if query.contains('/') => powerpack::output(iter::once(exact(query))),
         Some(query) => powerpack::output(
             repos
                 .into_iter()
