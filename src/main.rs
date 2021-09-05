@@ -1,4 +1,5 @@
 mod cache;
+mod detach;
 mod github;
 
 use std::env;
@@ -39,7 +40,7 @@ fn shortcut_to_item<'a>(shortcut: (String<'a>, String<'a>)) -> Item<'a> {
     Item::new(shortcut.0).arg(format!("https://github.com{}", shortcut.1))
 }
 
-fn exact<'a>(query: &'a str) -> Item<'a> {
+fn exact(query: &str) -> Item {
     Item::new(query).arg(format!("https://github.com/{}", query))
 }
 

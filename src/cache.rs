@@ -1,7 +1,3 @@
-mod detach;
-mod logger;
-mod mutex;
-
 use std::fs;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
@@ -11,6 +7,7 @@ use once_cell::sync::Lazy;
 use powerpack::env;
 use serde::{Deserialize, Serialize};
 
+use crate::detach;
 use crate::github;
 
 const UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60);
@@ -64,12 +61,12 @@ fn check_and_load() -> Result<Cache> {
         Ok(cache) => {
             let now = SystemTime::now();
             if now.duration_since(cache.modified)? > UPDATE_INTERVAL {
-                detach::child(|| mutex::or_ignore(update))?;
+                detach::child(update)?;
             }
             Ok(cache)
         }
         Err(_) => {
-            detach::child(|| mutex::or_ignore(update))?;
+            detach::child(update)?;
             Ok(Cache::empty())
         }
     }

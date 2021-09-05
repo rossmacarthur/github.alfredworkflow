@@ -4,7 +4,6 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{Context, Result};
 use log::Log;
-use once_cell::sync::Lazy;
 use powerpack::env;
 
 const LOG_FILENAME: &str = concat!(
@@ -13,7 +12,6 @@ const LOG_FILENAME: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     ".log"
 );
-pub static LOGGER: Lazy<Logger> = Lazy::new(|| Logger::new().unwrap());
 
 pub struct Logger {
     file: Arc<Mutex<fs::File>>,
@@ -21,7 +19,7 @@ pub struct Logger {
 
 impl Log for Logger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.level() <= log::Level::Info
+        true
     }
 
     fn log(&self, record: &log::Record) {
@@ -39,7 +37,7 @@ impl Log for Logger {
 }
 
 impl Logger {
-    fn new() -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let cache_dir = env::workflow_cache().context("failed to find cache directory")?;
         fs::create_dir_all(&cache_dir)?;
         let path = cache_dir.join(LOG_FILENAME);

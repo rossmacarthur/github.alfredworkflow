@@ -1,10 +1,14 @@
+mod logger;
+mod mutex;
+
 use std::io;
 use std::panic::{self, PanicInfo};
 use std::process;
 
 use anyhow::Result;
+use powerpack::env;
 
-use crate::cache::logger::LOGGER;
+use self::logger::Logger;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Fork {
@@ -50,8 +54,11 @@ where
     F: FnOnce() -> Result<()>,
 {
     close_fds()?;
-    log::set_logger(&*LOGGER)?;
-    log::set_max_level(log::LevelFilter::Info);
+    log::set_boxed_logger(Box::new(Logger::new()?))?;
+    log::set_max_level(match env::is_debug() {
+        true => log::LevelFilter::Debug,
+        false => log::LevelFilter::Info,
+    });
     panic::set_hook(Box::new(panic_hook));
     f()?;
     Ok(())
@@ -63,19 +70,22 @@ where
 /// - In the parent:
 ///   - Returns immediately.
 /// - In the child:
+///   - Detach the stdin/stdout/stderr file descriptors.
 ///   - Setup a logger that logs to a file.
 ///   - Setup a panic hook that logs an error on panic.
-///   - Detach the stdin/stdout/stderr file descriptors.
+///   - Execute the provided child function.
 pub fn child<F>(f: F) -> Result<()>
 where
     F: FnOnce() -> Result<()>,
 {
-    if let Fork::Child = fork()? {
-        if let Err(err) = execute(f) {
-            log::error!("{:#}", err);
-            process::exit(1);
+    mutex::or_ignore(|| {
+        if let Fork::Child = fork()? {
+            if let Err(err) = execute(f) {
+                log::error!("{:#}", err);
+                process::exit(1);
+            }
+            process::exit(0);
         }
-        process::exit(0);
-    }
-    Ok(())
+        Ok(())
+    })
 }
