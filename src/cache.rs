@@ -1,77 +1,104 @@
 use std::fs;
-use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
+use std::io;
+use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::{Duration, Instant, SystemTime};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use once_cell::sync::Lazy;
+use powerpack::detach;
 use powerpack::env;
 use serde::{Deserialize, Serialize};
+use serde_json as json;
 
-use crate::detach;
-use crate::github;
+use crate::logger;
 
-const UPDATE_INTERVAL: Duration = Duration::from_secs(60 * 60);
+const UPDATE_INTERVAL: Duration = Duration::from_secs(60);
 
-static CACHE_DIR: Lazy<PathBuf> =
-    Lazy::new(|| env::workflow_cache().expect("failed to get workflow cache directory"));
+pub static DIR: Lazy<PathBuf> = Lazy::new(|| {
+    env::workflow_cache().unwrap_or_else(|| {
+        let bundle_id = env::workflow_bundle_id()
+            .map(dairy::String::from)
+            .unwrap_or_else(|| "io.macarthur.ross.github".into());
+        home::home_dir()
+            .unwrap()
+            .join("Library/Caches/com.runningwithcrayons.Alfred/Workflow Data")
+            .join(&*bundle_id)
+    })
+});
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 struct Cache {
+    checksum: [u8; 20],
     modified: SystemTime,
-    repos: Vec<github::Repo>,
+    data: json::Value,
 }
 
-impl Cache {
-    fn new(repos: Vec<github::Repo>) -> Self {
-        Self {
-            modified: SystemTime::now(),
-            repos,
-        }
-    }
+pub fn load<F>(key: &str, checksum: [u8; 20], f: F) -> Result<json::Value>
+where
+    F: FnOnce() -> Result<json::Value>,
+{
+    let dir = DIR.join(key);
+    let path = dir.join("data.json");
 
-    fn empty() -> Self {
-        Self {
-            modified: SystemTime::now(),
-            repos: Vec::new(),
-        }
-    }
+    match fs::read(&path) {
+        Ok(data) => {
+            let curr: Cache = json::from_slice(&data)?;
+            let needs_update = curr.checksum != checksum || {
+                let now = SystemTime::now();
+                now.duration_since(curr.modified)? > UPDATE_INTERVAL
+            };
 
-    fn dump(&self) -> Result<()> {
-        fs::create_dir_all(&*CACHE_DIR)?;
-        let path = CACHE_DIR.join("cache.json");
-        let bytes = serde_json::to_vec(self)?;
-        Ok(fs::write(path, &bytes)?)
-    }
-}
-
-fn try_load() -> Result<Cache> {
-    let path = CACHE_DIR.join("cache.json");
-    let bytes = fs::read(path)?;
-    Ok(serde_json::from_slice(&bytes)?)
-}
-
-fn update() -> Result<()> {
-    let cache = Cache::new(github::repos()?);
-    cache.dump()?;
-    Ok(())
-}
-
-fn check_and_load() -> Result<Cache> {
-    match try_load() {
-        Ok(cache) => {
-            let now = SystemTime::now();
-            if now.duration_since(cache.modified)? > UPDATE_INTERVAL {
-                detach::child(update)?;
+            if needs_update {
+                detach::spawn(|| match update(&dir, &path, checksum, f) {
+                    Ok(()) => log::info!("fetched {} and updated cache", path.display()),
+                    Err(err) => log::error!("{:#}", err),
+                })?;
             }
-            Ok(cache)
+
+            Ok(curr.data)
         }
-        Err(_) => {
-            detach::child(update)?;
-            Ok(Cache::empty())
+        Err(err) if err.kind() == io::ErrorKind::NotFound => {
+            fs::create_dir_all(&dir)?;
+
+            detach::spawn(|| match update(&dir, &path, checksum, f) {
+                Ok(()) => log::info!("fetched {} and updated cache", path.display()),
+                Err(err) => log::error!("{:#}", err),
+            })?;
+
+            // wait up to 5 seconds for the cache to be populated
+            let start = Instant::now();
+            let poll_duration = Duration::from_secs(5);
+            while Instant::now().duration_since(start) < poll_duration {
+                thread::sleep(Duration::from_millis(200));
+                if let Ok(data) = fs::read(&path) {
+                    let curr: Cache = json::from_slice(&data)?;
+                    return Ok(curr.data);
+                }
+            }
+            Err(anyhow!("timeout waiting for cached data"))
         }
+        Err(err) => Err(err.into()),
     }
 }
 
-pub fn repos() -> Result<Vec<github::Repo>> {
-    check_and_load().map(|cache| cache.repos)
+fn update<F>(dir: &Path, path: &Path, checksum: [u8; 20], f: F) -> Result<()>
+where
+    F: FnOnce() -> Result<json::Value>,
+{
+    logger::init()?;
+    if let Some(_guard) = fmutex::try_lock(dir)? {
+        let data = f()?;
+        let file = fs::File::create(path)?;
+        let modified = SystemTime::now();
+        json::to_writer(
+            &file,
+            &Cache {
+                checksum,
+                modified,
+                data,
+            },
+        )?;
+    }
+    Ok(())
 }

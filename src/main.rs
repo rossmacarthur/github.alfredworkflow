@@ -1,75 +1,78 @@
 mod cache;
-mod detach;
 mod github;
+mod logger;
 
+use std::cmp::Reverse;
 use std::env;
 use std::iter;
-use std::vec;
 
 use anyhow::Result;
-use itertools::Itertools;
-use powerpack::{Item, String};
+use chrono::DateTime;
+use powerpack::Item;
 
-const SHORTCUTS: &[(&str, &str)] = &[
-    ("/feed", "/"),
-    ("/issues", "/issues"),
-    ("/notifications", "/notifications"),
-    ("/pulls", "/pulls"),
-    ("/settings", "/settings"),
-];
+#[derive(Debug)]
+pub struct Repository {
+    owner: String,
+    name: String,
+    description: Option<String>,
+    url: String,
+    is_fork: bool,
+    is_archived: bool,
+    is_private: bool,
+    updated_at: DateTime<chrono::Utc>,
+}
 
-fn shortcuts() -> vec::IntoIter<(String<'static>, String<'static>)> {
-    let mut shortcuts: Vec<_> = SHORTCUTS
-        .iter()
-        .map(|&(a, b)| (String::from(a), String::from(b)))
-        .sorted_by(|a, b| a.0.cmp(&b.0))
-        .collect();
-    if let Some(user) = powerpack::env::var("GITHUB_USER") {
-        shortcuts.insert(0, ("/profile".into(), format!("/{}", user).into()));
+impl Repository {
+    fn into_item(self) -> Item<'static> {
+        let mut title = format!("{}/{}", self.owner, self.name);
+        if self.is_private {
+            title.push_str(" 🔒");
+        }
+        if self.is_archived {
+            title.push_str(" 📁");
+        }
+        let item = Item::new(title).arg(self.url);
+        match self.description {
+            Some(desc) => item.subtitle(desc),
+            None => item,
+        }
     }
-    shortcuts.into_iter()
 }
 
-fn repo_to_item(repo: github::Repo) -> Item<'static> {
-    Item::new(repo.name.clone())
-        .subtitle(format!("#{}/{}", repo.owner.login, repo.name))
-        .arg(repo.url())
-}
+fn run() -> Result<()> {
+    let query = env::args()
+        .nth(1)
+        .as_deref()
+        .map(str::trim)
+        .map(str::to_lowercase);
+    let filter_fn = |repo: &Repository| repo.name.contains(query.as_deref().unwrap_or(""));
 
-fn shortcut_to_item<'a>(shortcut: (String<'a>, String<'a>)) -> Item<'a> {
-    Item::new(shortcut.0).arg(format!("https://github.com{}", shortcut.1))
-}
+    let mut repos = Vec::new();
+    if let Some(users) = powerpack::env::var("GITHUB_USERS") {
+        for user in users.split(',') {
+            repos.extend(github::user_repos(user)?.into_iter().filter(filter_fn));
+        }
+    }
+    if let Some(orgs) = powerpack::env::var("GITHUB_ORGS") {
+        for org in orgs.split(',') {
+            repos.extend(github::org_repos(org)?.into_iter().filter(filter_fn));
+        }
+    }
 
-fn exact(query: &str) -> Item {
-    Item::new(query).arg(format!("https://github.com/{}", query))
-}
+    repos.sort_by_key(|repo| (repo.is_archived, repo.is_fork, Reverse(repo.updated_at)));
+    powerpack::output(repos.into_iter().map(Repository::into_item))?;
 
-fn run(query: Option<&str>) -> Result<()> {
-    let repos = cache::repos()?;
-    match query {
-        Some("") | None => powerpack::output(repos.into_iter().sorted().map(repo_to_item)),
-        Some(query) if query.starts_with('/') => powerpack::output(
-            shortcuts()
-                .filter(|(s, _)| s.starts_with(query))
-                .map(shortcut_to_item),
-        ),
-        Some(query) if query.contains('/') => powerpack::output(iter::once(exact(query))),
-        Some(query) => powerpack::output(
-            repos
-                .into_iter()
-                .filter(|repo| repo.owner.login.starts_with(query) || repo.name.starts_with(query))
-                .sorted()
-                .map(repo_to_item)
-                .chain(
-                    shortcuts()
-                        .filter(|(s, _)| s[1..].starts_with(query))
-                        .map(shortcut_to_item),
-                ),
-        ),
-    }?;
     Ok(())
 }
 
 fn main() -> Result<()> {
-    run(env::args().nth(1).as_deref().map(str::trim))
+    if let Err(err) = run() {
+        eprintln!("{:#}", err);
+        let item = Item::new(format!("Error: {}", err)).subtitle(
+            "The workflow errored! \
+             You might want to try debugging it or checking the logs.",
+        );
+        powerpack::output(iter::once(item))?;
+    }
+    Ok(())
 }

@@ -79,13 +79,13 @@
 				<key>script</key>
 				<string></string>
 				<key>scriptargtype</key>
-				<integer>0</integer>
+				<integer>1</integer>
 				<key>scriptfile</key>
 				<string>github-alfred-workflow</string>
 				<key>subtext</key>
 				<string></string>
 				<key>title</key>
-				<string>Search</string>
+				<string>Search for repos</string>
 				<key>type</key>
 				<integer>8</integer>
 				<key>withspace</key>
@@ -118,6 +118,19 @@
 			<integer>50</integer>
 		</dict>
 	</dict>
+	<key>variables</key>
+	<dict>
+		<key>GITHUB_ORGS</key>
+		<string></string>
+		<key>GITHUB_TOKEN</key>
+		<string></string>
+		<key>GITHUB_USERS</key>
+		<string></string>
+	</dict>
+	<key>variablesdontexport</key>
+	<array>
+		<string>GITHUB_TOKEN</string>
+	</array>
 	<key>version</key>
 	<string>0.1.0</string>
 </dict>

@@ -1,10 +1,13 @@
 use std::fs;
+use std::io;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use log::Log;
-use powerpack::env;
+use once_cell::sync::Lazy;
+
+use crate::cache;
 
 const LOG_FILENAME: &str = concat!(
     env!("CARGO_PKG_NAME"),
@@ -12,14 +15,15 @@ const LOG_FILENAME: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     ".log"
 );
+static LOGGER: Lazy<Logger> = Lazy::new(|| Logger::new().unwrap());
 
-pub struct Logger {
+struct Logger {
     file: Arc<Mutex<fs::File>>,
 }
 
 impl Log for Logger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        true
+        metadata.level() <= log::Level::Info
     }
 
     fn log(&self, record: &log::Record) {
@@ -37,10 +41,9 @@ impl Log for Logger {
 }
 
 impl Logger {
-    pub fn new() -> Result<Self> {
-        let cache_dir = env::workflow_cache().context("failed to find cache directory")?;
-        fs::create_dir_all(&cache_dir)?;
-        let path = cache_dir.join(LOG_FILENAME);
+    fn new() -> io::Result<Self> {
+        fs::create_dir_all(&*cache::DIR)?;
+        let path = cache::DIR.join(LOG_FILENAME);
         let file = fs::OpenOptions::new()
             .create(true)
             .append(true)
@@ -48,4 +51,10 @@ impl Logger {
         let file = Arc::new(Mutex::new(file));
         Ok(Self { file })
     }
+}
+
+pub fn init() -> Result<()> {
+    log::set_logger(&*LOGGER)?;
+    log::set_max_level(log::LevelFilter::Info);
+    Ok(())
 }

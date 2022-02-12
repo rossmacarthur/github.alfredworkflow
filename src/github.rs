@@ -1,58 +1,140 @@
-use anyhow::Result;
-use isahc::prelude::*;
-use once_cell::sync::Lazy;
-use powerpack::env;
-use regex_macro::regex;
-use serde::{Deserialize, Serialize};
+use std::io::prelude::*;
+
+use anyhow::{anyhow, Context, Result};
+use chrono::DateTime;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+use serde_json as json;
+
+use crate::Repository;
 
 const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
-static TOKEN: Lazy<String> =
-    Lazy::new(|| env::var("GITHUB_TOKEN").expect("`GITHUB_TOKEN` must be set"));
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
-pub struct Owner {
-    pub login: String,
-}
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
-pub struct Repo {
-    pub name: String,
-    pub owner: Owner,
-}
-
-impl Repo {
-    pub fn url(&self) -> String {
-        format!("https://github.com/{}/{}", self.owner.login, self.name)
+fn fetch(query: &str, token: &str) -> Result<json::Value> {
+    #[derive(Debug, Serialize)]
+    struct Query<'a> {
+        query: &'a str,
     }
+
+    let mut buf = Vec::new();
+    let mut easy = curl::easy::Easy::new();
+    let mut data = &*serde_json::to_vec(&Query { query })?;
+
+    eprintln!("{}", query);
+
+    easy.fail_on_error(true)?;
+    easy.follow_location(true)?;
+    easy.http_headers({
+        let mut hl = curl::easy::List::new();
+        hl.append(&format!("Authorization: Bearer {}", token))?;
+        hl.append(&format!("User-Agent: {}", USER_AGENT))?;
+        hl
+    })?;
+    easy.post(true)?;
+    easy.url("https://api.github.com/graphql")?;
+
+    {
+        let mut t = easy.transfer();
+        t.read_function(|into| Ok(data.read(into).unwrap()))?;
+        t.write_function(|data| {
+            buf.extend_from_slice(data);
+            Ok(data.len())
+        })?;
+        t.perform()?;
+    }
+
+    Ok(serde_json::from_slice(&buf)?)
 }
 
-pub fn repos() -> Result<Vec<Repo>> {
-    let mut repos = Vec::new();
-    let mut url = String::from("https://api.github.com/user/repos");
+fn fetch_and_parse<T>(
+    name: &str,
+    query: &str,
+    checksum: [u8; 20],
+    ptr: &str,
+    parse_fn: fn(json::Value) -> Result<T>,
+) -> Result<Vec<T>> {
+    let token = powerpack::env::var("GITHUB_TOKEN")
+        .ok_or_else(|| anyhow!("GITHUB_TOKEN environment variable is not set!"))?;
+    let resp = crate::cache::load(name, checksum, || fetch(query, &token))?;
+    let nodes: Vec<json::Value> = lookup(&resp, ptr)?;
+    nodes.into_iter().map(parse_fn).collect()
+}
 
-    let client = isahc::HttpClient::builder()
-        .default_headers(&[
-            ("Accept", "application/vnd.github.v3+json"),
-            ("Authorization", &format!("token {}", &*TOKEN)),
-            ("User-Agent", USER_AGENT),
-        ])
-        .build()?;
+pub fn user_repos(user: &str) -> Result<Vec<Repository>> {
+    repos("user", user)
+}
 
-    loop {
-        let mut resp = client.get(url)?;
-        repos.extend(resp.json::<Vec<_>>()?.into_iter());
+pub fn org_repos(org: &str) -> Result<Vec<Repository>> {
+    repos("organization", org)
+}
 
-        let link = resp.headers().get("link").unwrap().to_str().unwrap();
-        let next = regex!(r#".*<(.*)>; rel="next".*"#)
-            .captures(link)
-            .map(|caps| caps[1].into());
-
-        if let Some(u) = next {
-            url = u;
-        } else {
-            break;
+fn repos(typ: &str, login: &str) -> Result<Vec<Repository>> {
+    let query = r#"
+query {
+    <type>(login: "<login>") {
+        repositories(first: 100) {
+            nodes {
+                owner {
+                    login
+                }
+                name
+                description
+                url
+                isFork
+                isArchived
+                isPrivate
+                pushedAt
+            }
         }
     }
-    Ok(repos)
+}"#
+    .replace("<type>", typ)
+    .replace("<login>", login);
+    let ptr = format!("/data/{}/repositories/nodes", typ);
+    let checksum = checksum(&query);
+    fetch_and_parse(
+        &format!("{}_repos", login),
+        &query,
+        checksum,
+        &ptr,
+        parse_repository,
+    )
+}
+
+fn parse_repository(value: json::Value) -> Result<Repository> {
+    let owner = lookup(&value, "/owner/login")?;
+    let name = lookup(&value, "/name")?;
+    let description = lookup(&value, "/description")?;
+    let url = lookup(&value, "/url")?;
+    let is_fork = lookup(&value, "/isFork")?;
+    let is_archived = lookup(&value, "/isArchived")?;
+    let is_private = lookup(&value, "/isPrivate")?;
+    let updated_at: DateTime<chrono::Utc> = lookup::<String>(&value, "/pushedAt")?.parse()?;
+    Ok(Repository {
+        owner,
+        name,
+        description,
+        url,
+        is_fork,
+        is_archived,
+        is_private,
+        updated_at,
+    })
+}
+
+fn lookup<T>(value: &json::Value, ptr: &str) -> Result<T>
+where
+    T: DeserializeOwned,
+{
+    let v = value
+        .pointer(ptr)
+        .with_context(|| format!("failed to lookup `{}`", ptr))?;
+    Ok(json::from_value(v.clone())?)
+}
+
+fn checksum(query: &str) -> [u8; 20] {
+    use sha1::*;
+    let mut hasher = Sha1::new();
+    hasher.update(query.as_bytes());
+    hasher.finalize().try_into().unwrap()
 }
