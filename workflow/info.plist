@@ -23,7 +23,7 @@
 	<key>createdby</key>
 	<string>Ross MacArthur</string>
 	<key>description</key>
-	<string>Search for GitHub repos.</string>
+	<string>Search for GitHub repositories</string>
 	<key>disabled</key>
 	<false/>
 	<key>name</key>
@@ -100,7 +100,11 @@
 		</dict>
 	</array>
 	<key>readme</key>
-	<string></string>
+	<string>You can configure the users and organizations from which the list of repositories is fetched for by setting the following environment variables.
+
+- GITHUB_TOKEN: GitHub personal access token with `repo` and `read:org` scopes.
+- GITHUB_USERS: Comma separated list of GitHub users.
+- GITHUB_ORGS: Comma separated list of GitHub organizations.</string>
 	<key>uidata</key>
 	<dict>
 		<key>175BB77C-330B-465F-A2E7-E4CEF4BDE70D</key>
@@ -133,5 +137,7 @@
 	</array>
 	<key>version</key>
 	<string>0.1.0</string>
+	<key>webaddress</key>
+	<string>https://github.com/rossmacarthur/github.alfredworkflow</string>
 </dict>
 </plist>
