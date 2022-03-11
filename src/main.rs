@@ -1,4 +1,5 @@
 mod cache;
+mod emojis;
 mod github;
 mod logger;
 
@@ -8,7 +9,7 @@ use std::iter;
 
 use anyhow::Result;
 use chrono::DateTime;
-use powerpack::Item;
+use powerpack::{Item, ModifierData, ModifierKey};
 
 #[derive(Debug)]
 pub struct Repository {
@@ -24,16 +25,19 @@ pub struct Repository {
 
 impl Repository {
     fn into_item(self) -> Item<'static> {
-        let mut title = format!("{}/{}", self.owner, self.name);
+        let mut title = self.name;
         if self.is_private {
             title.push_str(" 🔒");
         }
         if self.is_archived {
             title.push_str(" 📁");
         }
-        let item = Item::new(title).arg(self.url);
+        let item = Item::new(title).arg(self.url.clone()).modifier(
+            ModifierKey::Shift,
+            ModifierData::new().subtitle(format!("{} →", self.url)),
+        );
         match self.description {
-            Some(desc) => item.subtitle(desc),
+            Some(desc) => item.subtitle(emojis::replace(&desc)),
             None => item,
         }
     }
@@ -45,6 +49,7 @@ fn run() -> Result<()> {
         .as_deref()
         .map(str::trim)
         .map(str::to_lowercase);
+
     let filter_fn = |repo: &Repository| repo.name.contains(query.as_deref().unwrap_or(""));
 
     let mut repos = Vec::new();
@@ -58,7 +63,6 @@ fn run() -> Result<()> {
             repos.extend(github::org_repos(org)?.into_iter().filter(filter_fn));
         }
     }
-
     repos.sort_by_key(|repo| (repo.is_archived, repo.is_fork, Reverse(repo.updated_at)));
     powerpack::output(repos.into_iter().map(Repository::into_item))?;
 

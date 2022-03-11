@@ -47,11 +47,12 @@ The release will be available at `target/workflow/github.alfredworkflow`.
 You can configure the users and organizations from which the list of
 repositories is fetched for by setting the following environment variables.
 
-| Name           | Example                 | Description                                                      |
-| -------------- | ----------------------- | ---------------------------------------------------------------- |
-| `GITHUB_TOKEN` | `ghp_pv7K2GA...`        | GitHub [personal access token] with `repo` and `read:org` scopes |
-| `GITHUB_USERS` | `rossmacarthur`         | Comma separated list of GitHub users                             |
-| `GITHUB_ORGS`  | `extractions,rust-lang` | Comma separated list of GitHub organizations                     |
+| Name           | Example                 | Description                                                                   |
+| -------------- | ----------------------- | ----------------------------------------------------------------------------- |
+| `GITHUB_TOKEN` | `ghp_pv7K2GA...`        | *(Required)* GitHub [personal access token] with `repo` and `read:org` scopes |
+| `GITHUB_USERS` | `rossmacarthur`         | *(Optional)* Comma separated list of GitHub users                             |
+| `GITHUB_ORGS`  | `extractions,rust-lang` | *(Optional)* Comma separated list of GitHub organizations                     |
+
 
 [personal access token]: https://github.com/settings/tokens/new?description=github.alfredworkflow&scopes=repo,read:org
 
