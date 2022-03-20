@@ -23,7 +23,7 @@ pub struct Repository {
 }
 
 impl Repository {
-    fn into_item(self) -> Item<'static> {
+    fn into_item(self) -> Item {
         let mut title = format!("{}/{}", self.owner, self.name);
         if self.is_private {
             title.push_str(" 🔒");
