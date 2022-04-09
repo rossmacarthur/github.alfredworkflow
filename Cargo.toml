@@ -10,7 +10,6 @@ publish = false
 anyhow = "1.0.56"
 chrono = "0.4.19"
 curl = "0.4.43"
-dairy = "0.2.2"
 fmutex = "0.1.0"
 home = "0.5.3"
 log = { version = "0.4.14", features = ["std"] }
