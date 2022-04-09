@@ -87,9 +87,10 @@ where
     F: FnOnce() -> Result<json::Value>,
 {
     logger::init()?;
+    let tmp = path.with_extension("tmp");
     if let Some(_guard) = fmutex::try_lock(dir)? {
         let data = f()?;
-        let file = fs::File::create(path)?;
+        let file = fs::File::create(&tmp)?;
         let modified = SystemTime::now();
         json::to_writer(
             &file,
@@ -99,6 +100,7 @@ where
                 data,
             },
         )?;
+        fs::rename(tmp, path)?;
     }
     Ok(())
 }
