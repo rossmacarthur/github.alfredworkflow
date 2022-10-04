@@ -81,7 +81,7 @@ where
     }
 }
 
-fn update<F>(dir: &Path, path: &Path, checksum: [u8; 20], f: F) -> Result<()>
+fn update<F>(dir: &Path, path: &Path, checksum: [u8; 20], f: F) -> Result<bool>
 where
     F: FnOnce() -> Result<json::Value>,
 {
@@ -100,6 +100,8 @@ where
             },
         )?;
         fs::rename(tmp, path)?;
+        Ok(true)
+    } else {
+        Ok(false)
     }
-    Ok(())
 }
