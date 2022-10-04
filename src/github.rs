@@ -3,24 +3,95 @@ use std::io::prelude::*;
 use anyhow::{anyhow, Context, Result};
 use chrono::DateTime;
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json as json;
 
 use crate::Repository;
 
 const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
-fn fetch(query: &str, token: &str) -> Result<json::Value> {
+type ParseFn = fn(json::Value) -> Result<Repository>;
+
+struct Query<'a> {
+    name: String,
+    login: &'a str,
+    query: String,
+    page_info_ptr: &'a str,
+    nodes_ptr: &'a str,
+    parse_fn: ParseFn,
+}
+
+#[derive(Debug, Serialize)]
+struct Variables<'a> {
+    login: &'a str,
+    after: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct PageInfo {
+    #[serde(rename = "endCursor")]
+    cursor: String,
+    #[serde(rename = "hasNextPage")]
+    has_next: bool,
+}
+
+impl Query<'_> {
+    fn checksum(&self) -> [u8; 20] {
+        use sha1::*;
+        let mut hasher = Sha1::new();
+        hasher.update(self.name.as_bytes());
+        hasher.update(self.login.as_bytes());
+        hasher.update(self.query.as_bytes());
+        hasher.finalize().try_into().unwrap()
+    }
+}
+
+fn fetch_and_parse(q: Query<'_>) -> Result<Vec<Repository>> {
+    let token = powerpack::env::var("GITHUB_TOKEN")
+        .ok_or_else(|| anyhow!("GITHUB_TOKEN environment variable is not set!"))?;
+
+    let mut r = crate::cache::load(&q.name, q.checksum(), || fetch_all(&q, &token))?;
+    let resps = r
+        .as_array_mut()
+        .context("cache value is not an array")?
+        .drain(..);
+
+    let mut nodes = Vec::new();
+    for resp in resps {
+        let ns: Vec<json::Value> = lookup(&resp, q.nodes_ptr)?;
+        nodes.extend(ns);
+    }
+    nodes.into_iter().map(q.parse_fn).collect()
+}
+
+fn fetch_all(q: &Query<'_>, token: &str) -> Result<json::Value> {
+    let mut array = Vec::new();
+    let mut variables = Variables {
+        login: q.login,
+        after: None,
+    };
+
+    loop {
+        let resp = fetch(&q.query, &variables, token)?;
+        let page_info: PageInfo = lookup(&resp, q.page_info_ptr)?;
+        array.push(resp);
+        if !page_info.has_next {
+            break Ok(json::Value::Array(array));
+        }
+        variables.after = Some(page_info.cursor);
+    }
+}
+
+fn fetch(query: &str, variables: &Variables, token: &str) -> Result<json::Value> {
     #[derive(Debug, Serialize)]
     struct Query<'a> {
         query: &'a str,
+        variables: &'a Variables<'a>,
     }
 
     let mut buf = Vec::new();
     let mut easy = curl::easy::Easy::new();
-    let mut data = &*serde_json::to_vec(&Query { query })?;
-
-    eprintln!("{}", query);
+    let mut data = &*serde_json::to_vec(&Query { query, variables })?;
 
     easy.fail_on_error(true)?;
     easy.follow_location(true)?;
@@ -46,20 +117,6 @@ fn fetch(query: &str, token: &str) -> Result<json::Value> {
     Ok(serde_json::from_slice(&buf)?)
 }
 
-fn fetch_and_parse<T>(
-    name: &str,
-    query: &str,
-    checksum: [u8; 20],
-    ptr: &str,
-    parse_fn: fn(json::Value) -> Result<T>,
-) -> Result<Vec<T>> {
-    let token = powerpack::env::var("GITHUB_TOKEN")
-        .ok_or_else(|| anyhow!("GITHUB_TOKEN environment variable is not set!"))?;
-    let resp = crate::cache::load(name, checksum, || fetch(query, &token))?;
-    let nodes: Vec<json::Value> = lookup(&resp, ptr)?;
-    nodes.into_iter().map(parse_fn).collect()
-}
-
 pub fn user_repos(user: &str) -> Result<Vec<Repository>> {
     repos("user", user)
 }
@@ -68,11 +125,11 @@ pub fn org_repos(org: &str) -> Result<Vec<Repository>> {
     repos("organization", org)
 }
 
-fn repos(typ: &str, login: &str) -> Result<Vec<Repository>> {
-    let query = r#"
-query {
-    <type>(login: "<login>") {
-        repositories(first: 100) {
+fn repos(kind: &str, login: &str) -> Result<Vec<Repository>> {
+    let template = r#"
+query($login: String!, $after: String) {
+    <kind>(login: $login) {
+        repositories(first: 100, after: $after) {
             nodes {
                 owner {
                     login
@@ -85,20 +142,22 @@ query {
                 isPrivate
                 pushedAt
             }
+            pageInfo {
+                endCursor
+                hasNextPage
+            }
         }
     }
-}"#
-    .replace("<type>", typ)
-    .replace("<login>", login);
-    let ptr = format!("/data/{}/repositories/nodes", typ);
-    let checksum = checksum(&query);
-    fetch_and_parse(
-        &format!("{}_repos", login),
-        &query,
-        checksum,
-        &ptr,
-        parse_repository,
-    )
+}"#;
+    let query = template.replace("<kind>", kind);
+    fetch_and_parse(Query {
+        name: format!("{}_repos", login),
+        login,
+        query,
+        page_info_ptr: &format!("/data/{}/repositories/pageInfo", kind),
+        nodes_ptr: &format!("/data/{}/repositories/nodes", kind),
+        parse_fn: parse_repository,
+    })
 }
 
 fn parse_repository(value: json::Value) -> Result<Repository> {
@@ -130,11 +189,4 @@ where
         .pointer(ptr)
         .with_context(|| format!("failed to lookup `{}`", ptr))?;
     Ok(json::from_value(v.clone())?)
-}
-
-fn checksum(query: &str) -> [u8; 20] {
-    use sha1::*;
-    let mut hasher = Sha1::new();
-    hasher.update(query.as_bytes());
-    hasher.finalize().try_into().unwrap()
 }
