@@ -1,6 +1,6 @@
 # github.alfredworkflow
 
-[![Build status](https://img.shields.io/github/workflow/status/rossmacarthur/github.alfredworkflow/build/trunk)](https://github.com/rossmacarthur/github.alfredworkflow/actions?query=workflow%3Abuild)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/rossmacarthur/github.alfredworkflow/build.yaml?branch=trunk)](https://github.com/rossmacarthur/github.alfredworkflow/actions/workflows/build.yaml)
 [![Latest release](https://img.shields.io/github/v/release/rossmacarthur/github.alfredworkflow)](https://github.com/rossmacarthur/github.alfredworkflow/releases/latest)
 
 :octocat: Alfred workflow to search GitHub repositories.
@@ -57,10 +57,7 @@ repositories is fetched for by setting the following environment variables.
 
 ## License
 
-Licensed under either of
+This project is distributed under the terms of both the MIT license and the
+Apache License (Version 2.0).
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
-  http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-
-at your option.
+See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT) for details.
