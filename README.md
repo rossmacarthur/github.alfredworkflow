@@ -5,7 +5,7 @@
 
 :octocat: Alfred workflow to search GitHub repositories.
 
-![Screenshot](https://user-images.githubusercontent.com/17109887/153749070-b86f10e8-56e9-4457-bd13-52f9f21ba0a3.png)
+<img width="605" alt="Screenshot" src="https://user-images.githubusercontent.com/17109887/228236202-dee99039-5ffc-451b-8a38-9b541a5cdcf7.png">
 
 ## Features
 
