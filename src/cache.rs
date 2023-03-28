@@ -40,6 +40,12 @@ where
     let dir = DIR.join(key);
     let path = dir.join("data.json");
 
+    let update_cache = || match update(&dir, &path, checksum, f) {
+        Ok(true) => log::info!("fetched {} and updated cache", path.display()),
+        Ok(false) => log::info!("another process updated cache for {}", path.display()),
+        Err(err) => log::error!("{:#}", err),
+    };
+
     match fs::read(&path) {
         Ok(data) => {
             let curr: Cache = json::from_slice(&data)?;
@@ -49,10 +55,7 @@ where
             };
 
             if needs_update {
-                detach::spawn(|| match update(&dir, &path, checksum, f) {
-                    Ok(()) => log::info!("fetched {} and updated cache", path.display()),
-                    Err(err) => log::error!("{:#}", err),
-                })?;
+                detach::spawn(update_cache)?;
             }
 
             Ok(curr.data)
@@ -60,10 +63,7 @@ where
         Err(err) if err.kind() == io::ErrorKind::NotFound => {
             fs::create_dir_all(&dir)?;
 
-            detach::spawn(|| match update(&dir, &path, checksum, f) {
-                Ok(()) => log::info!("fetched {} and updated cache", path.display()),
-                Err(err) => log::error!("{:#}", err),
-            })?;
+            detach::spawn(update_cache)?;
 
             // wait up to 5 seconds for the cache to be populated
             let start = Instant::now();
