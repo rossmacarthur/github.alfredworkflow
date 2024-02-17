@@ -114,7 +114,21 @@ fn fetch(query: &str, variables: &Variables, token: &str) -> Result<json::Value>
         t.perform()?;
     }
 
-    Ok(serde_json::from_slice(&buf)?)
+    let data: json::Value = serde_json::from_slice(&buf)?;
+
+    // GitHub can return a 200 OK with an error message in the body
+    if let Some(errs) = data.pointer("/errors") {
+        if let Some(errs) = errs.as_array() {
+            for err in errs {
+                if let Some(json::Value::String(msg)) = err.pointer("/message") {
+                    return Err(anyhow!("GitHub error: {}", msg));
+                }
+            }
+        }
+        return Err(anyhow!("GitHub error: {}", errs));
+    }
+
+    Ok(data)
 }
 
 pub fn user_repos(user: &str) -> Result<Vec<Repository>> {
@@ -187,6 +201,6 @@ where
 {
     let v = value
         .pointer(ptr)
-        .with_context(|| format!("failed to lookup `{}`", ptr))?;
+        .with_context(|| format!("failed to lookup `{}` in `{:?}`", ptr, value))?;
     Ok(json::from_value(v.clone())?)
 }
