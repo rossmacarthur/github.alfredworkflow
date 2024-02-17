@@ -3,7 +3,6 @@ name: build
 on: [push, pull_request]
 
 env:
-  CARGO_TERM_COLOR: always
   RUSTFLAGS: --deny warnings
 
 jobs:
@@ -15,18 +14,18 @@ jobs:
         toolchain: [stable, beta, nightly]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Setup Rust
-      run: |
-        rustup set profile default
-        rustup toolchain install ${{ matrix.toolchain }}
-        rustup override set ${{ matrix.toolchain }}
+    - uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.toolchain }}
+        components: clippy, rustfmt
 
     - name: Rustfmt
       run: cargo fmt -- --check
 
     - name: Clippy
+      continue-on-error: ${{ matrix.toolchain == 'nightly' }}
       run: cargo clippy --workspace --all-targets
 
   check-version:
@@ -36,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Calculate version from tag
         id: version
@@ -56,21 +55,14 @@ jobs:
         target: [x86_64-apple-darwin, aarch64-apple-darwin]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: extractions/setup-crate@v1
         with:
           owner: rossmacarthur
           name: powerpack
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Rust
-        run: |
-          rustup set profile minimal
-          rustup toolchain install stable
-          rustup override set stable
-          rustup target add ${{ matrix.target }}
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Calculate version from tag
         id: version

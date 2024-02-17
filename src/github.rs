@@ -42,7 +42,7 @@ impl Query<'_> {
         hasher.update(self.name.as_bytes());
         hasher.update(self.login.as_bytes());
         hasher.update(self.query.as_bytes());
-        hasher.finalize().try_into().unwrap()
+        hasher.finalize().into()
     }
 }
 
