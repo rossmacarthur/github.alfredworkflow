@@ -1,11 +1,11 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 
 use anyhow::{anyhow, Result};
-use once_cell::sync::Lazy;
 use powerpack::detach;
 use powerpack::env;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ use crate::logger;
 
 const UPDATE_INTERVAL: Duration = Duration::from_secs(60);
 
-pub static DIR: Lazy<PathBuf> = Lazy::new(|| {
+pub static DIR: LazyLock<PathBuf> = LazyLock::new(|| {
     env::workflow_cache().unwrap_or_else(|| {
         let bundle_id =
             env::workflow_bundle_id().unwrap_or_else(|| "io.macarthur.ross.github".into());
@@ -65,11 +65,11 @@ where
 
             detach::spawn(update_cache)?;
 
-            // wait up to 5 seconds for the cache to be populated
+            // wait for the cache to be populated
             let start = Instant::now();
-            let poll_duration = Duration::from_secs(5);
+            let poll_duration = Duration::from_millis(500);
             while Instant::now().duration_since(start) < poll_duration {
-                thread::sleep(Duration::from_millis(200));
+                thread::sleep(Duration::from_millis(100));
                 if let Ok(data) = fs::read(&path) {
                     let curr: Cache = json::from_slice(&data)?;
                     return Ok(curr.data);

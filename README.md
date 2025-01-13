@@ -1,16 +1,17 @@
 # github.alfredworkflow
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/rossmacarthur/github.alfredworkflow/build.yaml?branch=trunk)](https://github.com/rossmacarthur/github.alfredworkflow/actions/workflows/build.yaml)
-[![Latest release](https://img.shields.io/github/v/release/rossmacarthur/github.alfredworkflow)](https://github.com/rossmacarthur/github.alfredworkflow/releases/latest)
+[![Build Status](https://badgers.space/github/checks/rossmacarthur/github.alfredworkflow?label=build)](https://github.com/rossmacarthur/github.alfredworkflow/actions/workflows/build.yaml)
+[![Latest release](https://badgers.space/github/release/rossmacarthur/github.alfredworkflow)](https://github.com/rossmacarthur/github.alfredworkflow/releases/latest)
 
-:octocat: Alfred workflow to search GitHub repositories.
-
-<img width="605" alt="Screenshot" src="https://user-images.githubusercontent.com/17109887/228236202-dee99039-5ffc-451b-8a38-9b541a5cdcf7.png">
+:octocat: Alfred workflow to search GitHub repositories and pull requests.
 
 ## Features
 
+- Configurable commands.
 - List repositories for any configured users and/or organizations.
-- Open the selected repository in your browser.
+  - Open the selected repository in your browser.
+- List pull requests for any configured repositories.
+  - Open the selected pull request in your browser.
 - Blazingly fast 🤸.
 
 ## 📦 Installation
@@ -44,16 +45,48 @@ The release will be available at `target/workflow/github.alfredworkflow`.
 
 ## Configuration
 
-You can configure the users and organizations from which the list of
-repositories is fetched for by setting the following environment variables.
+Behaviour of the workflow is configured using environment variables. At the top
+level there are "commands" which can be arbitrarily named. A command takes one
+of the following forms where `<cmd>` is the user defined name for the command.
 
-| Name           | Example                 | Description                                                      |
-| -------------- | ----------------------- | ---------------------------------------------------------------- |
-| `GITHUB_TOKEN` | `ghp_pv7K2GA...`        | GitHub [personal access token] with `repo` and `read:org` scopes |
-| `GITHUB_USERS` | `rossmacarthur`         | Comma separated list of GitHub users                             |
-| `GITHUB_ORGS`  | `extractions,rust-lang` | Comma separated list of GitHub organizations                     |
+| Key                  | Value            | Description                    |
+| -------------------- | ---------------- | ------------------------------ |
+| `GITHUB_REPOS_<cmd>` | `org:<owner>`    | List organization repositories |
+| `GITHUB_REPOS_<cmd>` | `user:<owner>`   | List user repositories         |
+| `GITHUB_PULLS_<cmd>` | `<owner>/<repo>` | List repository pull requests  |
 
-[personal access token]: https://github.com/settings/tokens/new?description=github.alfredworkflow&scopes=repo,read:org
+Authentication for the workflow is configured using environment variables. For
+any given command if there is an access token specific for that owner then it
+will be used, otherwise the workflow will fallback to the default access token.
+The default access token should always be set even if the command doesn't
+require special access levels because of the increased rate limits provided.
+
+| Name                  | Example          | Description                                            |
+| --------------------- | ---------------- | ------------------------------------------------------ |
+| `GITHUB_TOKEN`        | `ghp_pv7K2GA...` | GitHub [personal access token] to use                  |
+| `GITHUB_TOKEN_owner1` | `ghp_11aEcRG..`  | GitHub [personal access token] used to access `owner1` |
+| `GITHUB_TOKEN_owner2` | `ghp_11aEcRG..`  | GitHub [personal access token] used to access `owner2` |
+
+### Examples
+
+Let's say you wanted to have two commands:
+- `repos` that listed all the repositories in the `rust-lang` organization
+- `pulls` that listed all the pull requests in the `rust-lang/rust` repository
+
+You would define the following environment variables.
+
+| Key                  | Value            | Description                                             |
+| -------------------- | ---------------- | ------------------------------------------------------- |
+| `GITHUB_TOKEN`       | `ghp_pv7K2GA...` | GitHub [personal access token]                          |
+| `GITHUB_REPOS_repos` | `org:rust-lang`  | List the repositories on organization [`rust-lang`]     |
+| `GITHUB_PULLS_pulls` | `rust-lang/rust` | List the pull requests on repository [`rust-lang/rust`] |
+
+[`rust-lang`]: https://github.com/rust-lang
+[`rust-lang/rust`]: https://github.com/rust-lang/rust
+
+<img width="605" alt="image" src="https://github.com/user-attachments/assets/4320599e-45cb-476a-82b2-9c734a2c774a" />
+<img width="605" alt="image" src="https://github.com/user-attachments/assets/6e80d2ec-858f-4131-a120-6b889c2413b5" />
+<img width="605" alt="image" src="https://github.com/user-attachments/assets/943ccca6-4a42-456e-90aa-615c00352cfd" />
 
 ## License
 

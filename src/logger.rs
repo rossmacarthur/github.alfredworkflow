@@ -1,11 +1,11 @@
 use std::fs;
 use std::io;
 use std::io::prelude::*;
+use std::sync::LazyLock;
 use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use log::Log;
-use once_cell::sync::Lazy;
 
 use crate::cache;
 
@@ -15,7 +15,7 @@ const LOG_FILENAME: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     ".log"
 );
-static LOGGER: Lazy<Logger> = Lazy::new(|| Logger::new().unwrap());
+static LOGGER: LazyLock<Logger> = LazyLock::new(|| Logger::new().unwrap());
 
 struct Logger {
     file: Arc<Mutex<fs::File>>,
@@ -28,7 +28,7 @@ impl Log for Logger {
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let time = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S");
+            let time = jiff::Timestamp::now().strftime("%Y-%m-%dT%H:%M:%S");
             let mut f = self.file.lock().unwrap();
             writeln!(f, "[{}] [{}] {}", time, record.level(), record.args()).unwrap();
         }
