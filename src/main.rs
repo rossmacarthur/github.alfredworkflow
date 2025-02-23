@@ -12,7 +12,6 @@ use constcat::concat;
 use itermore::IterSorted;
 use powerpack::logger;
 use powerpack::Item;
-use then::Some;
 
 use crate::config::{Command, Config, Repo};
 use crate::ord_float::OrdFloat;
@@ -205,7 +204,8 @@ fn run() -> Result<()> {
                     let items: Vec<_> = config
                         .commands
                         .iter()
-                        .filter_map(|c| c.name().starts_with(cmd).some_with(|| c.to_item()))
+                        .filter(|c| c.name().starts_with(cmd))
+                        .map(Command::to_item)
                         .collect();
                     if items.is_empty() {
                         let item = Item::new("No command found");
