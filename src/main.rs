@@ -222,8 +222,8 @@ fn run() -> Result<()> {
 
 fn main() -> Result<()> {
     if let Err(err) = run() {
-        eprintln!("{:#}", err);
-        let item = Item::new(format!("Error: {}", err)).subtitle(
+        eprintln!("{err:#}");
+        let item = Item::new(format!("Error: {err}")).subtitle(
             "The workflow errored! \
              You might want to try debugging it or checking the logs.",
         );

@@ -4,6 +4,7 @@ use std::sync::LazyLock;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
+use constcat::concat;
 use powerpack::cache;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -12,7 +13,7 @@ use serde_json as json;
 use crate::config::Config;
 use crate::{PullRequest, Repository};
 
-const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+const USER_AGENT: &str = concat!(crate::PKG_NAME, "/", crate::PKG_VERSION);
 
 static CACHE: LazyLock<cache::Cache> = LazyLock::new(|| {
     cache::Builder::new()
