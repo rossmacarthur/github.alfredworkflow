@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use std::io::prelude::*;
+use std::sync::LazyLock;
+use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
+use powerpack::cache;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json as json;
@@ -10,6 +13,13 @@ use crate::config::Config;
 use crate::{PullRequest, Repository};
 
 const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+
+static CACHE: LazyLock<cache::Cache> = LazyLock::new(|| {
+    cache::Builder::new()
+        .ttl(Duration::from_secs(60))
+        .initial_poll(Duration::from_millis(500))
+        .build()
+});
 
 type ParseFn<T> = fn(json::Value) -> Result<T>;
 
@@ -47,7 +57,11 @@ impl<T> Query<'_, T> {
 }
 
 fn fetch_and_parse<T>(token: &str, q: Query<'_, T>) -> Result<Vec<T>> {
-    let mut r = crate::cache::load(&q.name, q.checksum(), || fetch_all(&q, token))?;
+    let mut r = CACHE.query(
+        cache::Query::new(&q.name)
+            .checksum(q.checksum())
+            .update_fn(|| fetch_all(&q, token)),
+    )?;
     let resps = r
         .as_array_mut()
         .context("cache value is not an array")?

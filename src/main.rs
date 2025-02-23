@@ -1,7 +1,5 @@
-mod cache;
 mod config;
 mod github;
-mod logger;
 mod ord_float;
 
 use std::cmp::Reverse;
@@ -10,12 +8,18 @@ use std::io;
 use std::time::Duration;
 
 use anyhow::Result;
+use constcat::concat;
 use itermore::IterSorted;
+use powerpack::logger;
 use powerpack::Item;
 use then::Some;
 
 use crate::config::{Command, Config, Repo};
 use crate::ord_float::OrdFloat;
+
+const PKG_NAME: &str = env!("CARGO_PKG_NAME");
+const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+const LOG_FILENAME: &str = concat!(PKG_NAME, "-", PKG_VERSION, ".log");
 
 #[derive(Debug)]
 pub struct Repository {
@@ -159,6 +163,8 @@ impl Command {
 }
 
 fn run() -> Result<()> {
+    logger::Builder::new().filename(LOG_FILENAME).try_init()?;
+
     let config = Config::load()?;
 
     let arg = env::args()
