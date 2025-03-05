@@ -120,12 +120,35 @@ fn org_repos(cmd: &Command, config: &Config, org: &str, query: &str) -> Result<V
 }
 
 fn pulls(cmd: &Command, config: &Config, repo: &Repo, query: &str) -> Result<Vec<Item>> {
+    let (query, author) = extract_author(query);
     let pulls = github::pulls(config, &repo.owner, &repo.name)?
         .into_iter()
-        .sorted_by_key(|pull| pull.cmp_key(query))
+        .filter(|pull| match author {
+            Some(author) => pull.author.starts_with(author),
+            None => true,
+        })
+        .sorted_by_key(|pull| pull.cmp_key(&query))
         .map(|pull| pull.into_item(cmd))
         .collect();
     Ok(pulls)
+}
+
+fn extract_author(query: &str) -> (String, Option<&str>) {
+    query
+        .split_ascii_whitespace()
+        .find_map(|word| {
+            if word.starts_with('@') && word.len() > 1 {
+                let author = word.trim_start_matches("@");
+                let query = query.replace(word, "");
+                Some((query, author))
+            } else {
+                None
+            }
+        })
+        .map_or_else(
+            || (query.to_string(), None),
+            |(query, author)| (query, Some(author)),
+        )
 }
 
 impl Command {
