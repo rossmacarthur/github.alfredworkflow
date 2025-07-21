@@ -22,7 +22,7 @@ const LOG_FILENAME: &str = concat!(PKG_NAME, "-", PKG_VERSION, ".log");
 
 #[derive(Debug)]
 pub struct Repository {
-    // owner: String,
+    owner: String,
     name: String,
     description: Option<String>,
     url: String,
@@ -106,6 +106,7 @@ fn similar(value: &str, query: &str) -> f64 {
 fn user_repos(cmd: &Command, config: &Config, user: &str, query: &str) -> Result<Vec<Item>> {
     Ok(github::user_repos(config, user)?
         .into_iter()
+        .filter(|repo| repo.owner == user) // remove aliases
         .sorted_by_key(|repo| repo.cmp_key(query))
         .map(|repo| repo.into_item(cmd))
         .collect())
@@ -114,6 +115,7 @@ fn user_repos(cmd: &Command, config: &Config, user: &str, query: &str) -> Result
 fn org_repos(cmd: &Command, config: &Config, org: &str, query: &str) -> Result<Vec<Item>> {
     Ok(github::org_repos(config, org)?
         .into_iter()
+        .filter(|repo| repo.owner == org) // remove aliases
         .sorted_by_key(|repo| repo.cmp_key(query))
         .map(|repo| repo.into_item(cmd))
         .collect())

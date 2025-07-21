@@ -185,7 +185,7 @@ query($login: String!, $after: String) {
 }
 
 fn parse_repository(value: json::Value) -> Result<Repository> {
-    // let owner = lookup(&value, "/owner/login")?;
+    let owner = lookup(&value, "/owner/login")?;
     let name = lookup(&value, "/name")?;
     let description = lookup(&value, "/description")?;
     let url = lookup(&value, "/url")?;
@@ -194,7 +194,7 @@ fn parse_repository(value: json::Value) -> Result<Repository> {
     let is_private = lookup(&value, "/isPrivate")?;
     let updated_at: jiff::Timestamp = lookup::<String>(&value, "/pushedAt")?.parse()?;
     Ok(Repository {
-        // owner,
+        owner,
         name,
         description,
         url,
