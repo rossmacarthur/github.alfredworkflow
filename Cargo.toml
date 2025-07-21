@@ -9,7 +9,6 @@ publish = false
 [dependencies]
 anyhow = "1.0.70"
 constcat = "0.6.0"
-curl = "0.4.44"
 itermore = { version = "0.7.1", features = ["std", "sorted"] }
 jiff = "0.2.1"
 powerpack = { version = "0.6.3", features = ["cache", "logger"] }
@@ -17,3 +16,4 @@ serde = { version = "1.0.158", features = ["derive"] }
 serde_json = "1.0.95"
 sha1 = "0.10.5"
 strsim = "0.11.0"
+ureq = { version = "3.0.6", default-features = false, features = ["native-tls", "json"] }

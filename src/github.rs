@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::prelude::*;
 use std::sync::LazyLock;
 use std::time::Duration;
 
@@ -104,32 +103,22 @@ fn fetch(
         variables: &'a HashMap<&'static str, json::Value>,
     }
 
-    let mut buf = Vec::new();
-    let mut easy = curl::easy::Easy::new();
-    let mut data = &*serde_json::to_vec(&Query { query, variables })?;
+    let agent = ureq::config::Config::builder()
+        .tls_config(
+            ureq::tls::TlsConfig::builder()
+                .provider(ureq::tls::TlsProvider::NativeTls)
+                .build(),
+        )
+        .build()
+        .new_agent();
 
-    easy.fail_on_error(true)?;
-    easy.follow_location(true)?;
-    easy.http_headers({
-        let mut hl = curl::easy::List::new();
-        hl.append(&format!("Authorization: Bearer {}", token))?;
-        hl.append(&format!("User-Agent: {}", USER_AGENT))?;
-        hl
-    })?;
-    easy.post(true)?;
-    easy.url("https://api.github.com/graphql")?;
-
-    {
-        let mut t = easy.transfer();
-        t.read_function(|into| Ok(data.read(into).unwrap()))?;
-        t.write_function(|data| {
-            buf.extend_from_slice(data);
-            Ok(data.len())
-        })?;
-        t.perform()?;
-    }
-
-    let data: json::Value = serde_json::from_slice(&buf)?;
+    let data: json::Value = agent
+        .post("https://api.github.com/graphql")
+        .header("Authorization", format!("Bearer {}", token))
+        .header("User-Agent", USER_AGENT)
+        .send_json(&Query { query, variables })?
+        .body_mut()
+        .read_json()?;
 
     // GitHub can return a 200 OK with an error message in the body
     if let Some(errs) = data.pointer("/errors") {
