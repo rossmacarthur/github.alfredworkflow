@@ -68,7 +68,7 @@ impl Config {
                     bail!("invalid value '{}', expected 'user:' or 'org:' prefix", v)
                 }
             } else if let Some(name) = k.strip_prefix("GITHUB_PULLS_") {
-                let repo = Repo::parse(&v).with_context(|| format!("invalid repo: {}", v))?;
+                let repo = Repo::parse(&v).with_context(|| format!("invalid repo: {v}"))?;
                 commands.push(Command::Pulls {
                     name: name.to_owned(),
                     repo,

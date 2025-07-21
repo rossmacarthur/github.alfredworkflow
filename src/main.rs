@@ -172,7 +172,7 @@ impl Command {
                 .autocomplete(format!("{name} ")),
             Self::Pulls { name, repo } => Item::new(name)
                 .subtitle(format!("Search pull requests against {repo}"))
-                .arg(format!("https://github.com/{}/pulls", repo))
+                .arg(format!("https://github.com/{repo}/pulls"))
                 .autocomplete(format!("{name} ")),
         }
     }

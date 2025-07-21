@@ -114,7 +114,7 @@ fn fetch(
 
     let data: json::Value = agent
         .post("https://api.github.com/graphql")
-        .header("Authorization", format!("Bearer {}", token))
+        .header("Authorization", format!("Bearer {token}"))
         .header("User-Agent", USER_AGENT)
         .send_json(&Query { query, variables })?
         .body_mut()
@@ -174,11 +174,11 @@ query($login: String!, $after: String) {
     fetch_and_parse(
         token,
         Query {
-            name: format!("repos_{}", login),
+            name: format!("repos_{login}"),
             query: &query,
             variables: HashMap::from_iter([("login", json::Value::from(login))]),
-            page_info_ptr: &format!("/data/{}/repositories/pageInfo", kind),
-            nodes_ptr: &format!("/data/{}/repositories/nodes", kind),
+            page_info_ptr: &format!("/data/{kind}/repositories/pageInfo"),
+            nodes_ptr: &format!("/data/{kind}/repositories/nodes"),
             parse_fn: parse_repository,
         },
     )
@@ -233,7 +233,7 @@ query($login: String!, $name: String!, $after: String) {
     fetch_and_parse(
         token,
         Query {
-            name: format!("pulls_{}_{}", login, name),
+            name: format!("pulls_{login}_{name}"),
             query,
             variables: HashMap::from_iter([
                 ("login", json::Value::from(login)),
@@ -267,6 +267,6 @@ where
 {
     let v = value
         .pointer(ptr)
-        .with_context(|| format!("failed to lookup `{}` in `{:?}`", ptr, value))?;
+        .with_context(|| format!("failed to lookup `{ptr}` in `{value:?}`"))?;
     Ok(json::from_value(v.clone())?)
 }
