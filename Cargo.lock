@@ -204,15 +204,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3ea1ec5f8307826a5b71094dd91fc04d4ae75d5709b20ad351c7fb4815c86ec"
 
 [[package]]
-name = "fmutex"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01e84c17070603126a7b0cd07d0ecc8e8cca4d15b67934ac2740286a84f3086c"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -655,9 +646,9 @@ checksum = "439ee305def115ba05938db6eb1644ff94165c5ab5e9420d1c1bcedbba909391"
 
 [[package]]
 name = "powerpack"
-version = "0.6.3"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ef833f5a2c19c41047bed384282ef62bfd9a71df17e2cebc8597b9e445951e5"
+checksum = "3a0ff9d015b06819f9bfda60ea6e6eb790f205dc4f91a5bf771435d7c4e31f64"
 dependencies = [
  "powerpack-cache",
  "powerpack-env",
@@ -668,12 +659,11 @@ dependencies = [
 
 [[package]]
 name = "powerpack-cache"
-version = "0.6.3"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18c487a441395200c35a3350c1e08e661b68bee04d71d1c3748eb9acbedbd7bf"
+checksum = "19567b28026dc8704d3fd84747c66443b9480476ddb907b79a85fac2adad95e2"
 dependencies = [
  "flagset",
- "fmutex",
  "home",
  "log",
  "powerpack-detach",
@@ -685,9 +675,9 @@ dependencies = [
 
 [[package]]
 name = "powerpack-detach"
-version = "0.6.3"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21c88a6c1533c248c7b03aea7f5ee5909b792d9af183cfe9b79e1e478d366dfe"
+checksum = "73d3dec525d295359a204aa6d589845aa297a908f6dd6baf50b27552bd71addf"
 dependencies = [
  "libc",
  "log",
@@ -695,18 +685,18 @@ dependencies = [
 
 [[package]]
 name = "powerpack-env"
-version = "0.6.3"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9aeac46b42ad05b18e0edff109fb4bc42b7e81c9789a8b5a25bd47e40f88289"
+checksum = "41d42a064b456edfdf862d47d6b06227a2bf617045a11f86f549e629ff908637"
 dependencies = [
  "home",
 ]
 
 [[package]]
 name = "powerpack-logger"
-version = "0.6.3"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66434226766ce5d224cf1b4056c9dc6ed00dc402f65d7899ed67cc22166573b7"
+checksum = "1b7dd2e7289b2fd19d91b735775005002cb9048098cffb31582eefdbb2c6fd51"
 dependencies = [
  "home",
  "jiff",

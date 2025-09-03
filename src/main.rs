@@ -10,8 +10,8 @@ use std::time::Duration;
 use anyhow::Result;
 use constcat::concat;
 use itermore::IterSorted;
-use powerpack::logger;
 use powerpack::Item;
+use powerpack::logger;
 
 use crate::config::{Command, Config, Repo};
 use crate::ord_float::OrdFloat;
@@ -42,7 +42,7 @@ struct PullRequest {
 }
 
 impl Repository {
-    fn cmp_key(&self, query: &str) -> impl Ord {
+    fn cmp_key(&self, query: &str) -> impl Ord + use<> {
         (
             Reverse(OrdFloat(similar(&self.name, query))),
             self.is_archived,
@@ -75,7 +75,7 @@ impl Repository {
 }
 
 impl PullRequest {
-    fn cmp_key(&self, query: &str) -> impl Ord {
+    fn cmp_key(&self, query: &str) -> impl Ord + use<> {
         (
             Reverse(OrdFloat(similar(&self.title, query))),
             Reverse(self.updated_at),
