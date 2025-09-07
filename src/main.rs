@@ -197,10 +197,8 @@ fn run() -> Result<()> {
         .map(str::trim)
         .map(str::to_lowercase);
 
-    if config.commands.is_empty() {
-        let item = Item::new("No commands configured yet")
-            .subtitle("Configure commands for this workflow using environment variables");
-        return output([item]);
+    if let Err(items) = check_config(&config) {
+        return output(items);
     }
 
     let items = match arg {
@@ -243,6 +241,30 @@ fn run() -> Result<()> {
     };
 
     output(items)
+}
+
+fn check_config(config: &Config) -> std::result::Result<(), Vec<Item>> {
+    let mut items = Vec::new();
+
+    if let Some(token) = &config.token
+        && token.contains("EXAMPLE")
+    {
+        let item = Item::new("No token configured")
+            .subtitle("Set the GITHUB_TOKEN environment variable to use this workflow");
+        items.push(item);
+    }
+
+    if config.commands.is_empty() {
+        let item = Item::new("No commands configured")
+            .subtitle("Configure commands for this workflow using environment variables");
+        items.push(item);
+    }
+
+    if !items.is_empty() {
+        return Err(items);
+    }
+
+    Ok(())
 }
 
 fn main() -> Result<()> {

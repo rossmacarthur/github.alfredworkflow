@@ -131,7 +131,7 @@ https://github.com/rossmacarthur/github.alfredworkflow?tab=readme-ov-file#config
 		<key>GITHUB_REPOS_repos</key>
 		<string>org:rust-lang</string>
 		<key>GITHUB_TOKEN</key>
-		<string>github_pat_11AECR...</string>
+		<string>github_pat_EXAMPLE...</string>
 	</dict>
 	<key>variablesdontexport</key>
 	<array>
